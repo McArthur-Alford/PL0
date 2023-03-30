@@ -11,6 +11,7 @@ enum Token {
     TIMES,                         // *
     SLASH,                         // /
     EQUAL,                         // =
+    EQUIV,                         // ==
     NEQUAL,                        // <>
     LESS,                          // <
     LEQUAL,                        // <=
@@ -34,6 +35,7 @@ impl Token {
             "<>" => Token::NEQUAL,
             "<=" => Token::LEQUAL,
             ">=" => Token::GEQUAL,
+            "==" => Token::EQUIV,
             "." => Token::PERIOD,
             ";" => Token::SEMICOLON,
             "," => Token::COMMA,
@@ -86,9 +88,13 @@ fn read(text: String) -> Vec<Token> {
     let mut n = 0;
     let mut tokens = Vec::new();
     while n < text.len() {
-        let (token, l) = Token::read_token(&text, n, n);
-        tokens.push(token);
-        n += l;
+        if text.chars().nth(n).unwrap_or_else(|| '-').is_whitespace() {
+            n += 1;
+        } else {
+            let (token, l) = Token::read_token(&text, n, n+1);
+            tokens.push(token);
+            n += l;
+        };
     }
     tokens
 }
@@ -96,6 +102,8 @@ fn read(text: String) -> Vec<Token> {
 
 #[cfg(test)]
 mod Tests {
+    use std::iter::zip;
+
     use super::*;
 
     #[test]
@@ -107,6 +115,14 @@ mod Tests {
     }
 
     #[test]
+    fn test_read_token_2() {
+        let text = "==".to_string();
+        let (t, l) = Token::read_token(&text, 0, 1);
+        assert_eq!(text.len(), l);
+        assert_eq!(Token::EQUIV, t);
+    }
+
+    #[test]
     fn test_read_program() {
         let text = "
             if x == 1 then x:=y+2 else x :=0 end
@@ -114,30 +130,34 @@ mod Tests {
         ";
 
         let tokens = read(text.to_string());
+        let answer = vec![
+            Token::IF,
+            Token::IDENTIFIER("x".to_string()),
+            Token::EQUIV,
+            Token::NUMBER(1),
+            Token::THEN,
+            Token::IDENTIFIER("x".to_string()),
+            Token::ASSIGN,
+            Token::IDENTIFIER("y".to_string()),
+            Token::PLUS,
+            Token::NUMBER(2),
+            Token::ELSE,
+            Token::IDENTIFIER("x".to_string()),
+            Token::ASSIGN,
+            Token::NUMBER(0),
+            Token::END,
+            Token::IDENTIFIER("x".to_string()),
+            Token::ASSIGN,
+            Token::IDENTIFIER("x".to_string()),
+            Token::PLUS,
+            Token::NUMBER(1),
+            Token::SEMICOLON
+        ];
+        for (a,t) in zip(answer.clone(), tokens.clone()) {
+            println!("{:?} =?= {:?}", a, t)
+        }
         assert_eq!(
-            vec![
-                Token::IF,
-                Token::IDENTIFIER("x".to_string()),
-                Token::EQUAL,
-                Token::NUMBER(1),
-                Token::THEN,
-                Token::IDENTIFIER("x".to_string()),
-                Token::ASSIGN,
-                Token::IDENTIFIER("y".to_string()),
-                Token::PLUS,
-                Token::NUMBER(2),
-                Token::ELSE,
-                Token::IDENTIFIER("x".to_string()),
-                Token::ASSIGN,
-                Token::NUMBER(0),
-                Token::END,
-                Token::IDENTIFIER("x".to_string()),
-                Token::ASSIGN,
-                Token::IDENTIFIER("x".to_string()),
-                Token::PLUS,
-                Token::NUMBER(1),
-                Token::SEMICOLON,
-            ],
+            answer,
             tokens
         )
     }
