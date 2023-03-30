@@ -1,4 +1,5 @@
 mod parser;
+mod token;
 
 #[derive(Debug, Clone, Copy)]
 enum OPCODE {
